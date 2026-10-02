@@ -1,10 +1,15 @@
 from data import get_data
 import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
 
 datasets=get_data()
 
 
 def features_data(data_f):
+
+
+    out=[]
 
     for data in data_f:
         data["5-Day Return"]=(data["Close"]/data["Close"].shift(5))-1 #5-day return  
@@ -19,18 +24,28 @@ def features_data(data_f):
 
         #EMA calculation
         multiplier=2/13
-        ema=data["Close"].iloc[0]
+        ema=[data["Close"].iloc[0]]
 
         for i in range(1,len(data)):
-            current_ema=
+            current_ema=data["Close"].iloc[i]*multiplier+ema[i-1]*(1-multiplier)
+
+            ema.append(current_ema)
+
+        data["EMA"]=ema    
+
+        #20-day volatility calculation using Parkinsons volatility
+
+        data["20-day Volatility"]=(np.sqrt((np.log(data["High"]/data["Low"]).rolling(20).sum())/(80*np.log(2))))*np.sqrt(252)
 
 
         data["%Volume Change"]=((data["Volume"]/data["Volume"].shift(1))-1)*100
         data["20-day Volume Change"]=data['Volume'].rolling(20).mean()
 
-    return data_f    
+        out.append(StandardScaler().set_output(transform="pandas").fit_transform(data.dropna())) #normalized using z-formula with scikit learn lib
+
+    return out
 
 
 result=features_data(datasets)
 
-print(result[0])
+print(result[0].dropna().to_string())
